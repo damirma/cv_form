@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CV Pro v2 — Formulario con Histórico + PDF</title>
+
+  <!-- Tipografía y estilos -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="cv_pro.css">
+
+  <!-- Librerías (CDN, sin bundler) -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/customParseFormat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ajv@8/dist/ajv7.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.9.3/dist/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+  <a href="#cvForm" class="skip-link">Saltar al formulario</a>
+
+  <header class="appbar" role="banner">
+    <div class="wrap">
+      <div class="brand">
+        <div class="mark" aria-hidden="true"></div>
+        <h1>CV Pro <span class="muted">v2</span></h1>
+      </div>
+      <div class="actions">
+
+        <button id="btnDemo" class="btn">Autollenar</button>
+        <button id="btnLimpiar" class="btn">Limpiar</button>
+        <button id="btnVista" class="btn">Vista previa</button>
+        <button id="btnGuardar" class="btn success">Guardar</button>
+        <button id="btnPDF" class="btn primary" title="Imprimir hoja de vida">Imprimir</button>
+
+        <button id="btnExport" class="btn">Exportar JSON</button>
+        <label class="btn" for="fileImport">Importar JSON</label>
+        <input id="fileImport" type="file" accept="application/json" hidden multiple>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap grid">
+    <!-- Formulario -->
+    <section class="card form-card">
+      <div class="hd">
+        <div class="hd-left">
+          <span class="dot" aria-hidden="true"></span>
+          <span>Completa tu información</span>
+        </div>
+        <div class="hd-right">
+          <div class="progress" aria-label="Completitud del formulario">
+            <div id="progressBar" class="bar" style="width:0%"></div>
+          </div>
+          <span id="progressPct" class="muted small">0%</span>
+        </div>
+      </div>
+
+      <div class="bd">
+        <form id="cvForm" novalidate>
+          <div id="formToast" class="toast" role="status" aria-live="polite"></div>
+          <div id="formErrors" class="errors" aria-live="polite"></div>
+
+          <div class="row">
+            <div class="col col-3">
+              <label for="foto">Foto (opcional)</label>
+              <div class="photo-uploader">
+                <img id="fotoPreview" alt="Previsualización de foto" src="" hidden>
+                <input id="foto" name="foto" type="file" accept="image/*">
+                <button type="button" id="btnQuitarFoto" class="btn tiny danger" hidden>Quitar foto</button>
+              </div>
+              <p class="muted small">• JPG/PNG. Se guarda en localStorage (base64).</p>
+            </div>
+
+            <div class="col">
+              <label for="nombre">Nombre completo <span class="req">*</span></label>
+              <input id="nombre" name="nombre" type="text" autocomplete="name" required placeholder="Ej: Erik Gil">
+            </div>
+            <div class="col">
+              <label for="titulo">Título/rol</label>
+              <input id="titulo" name="titulo" type="text" placeholder="Ej: Desarrollador Web">
+            </div>
+            <div class="col">
+              <label for="email">Email <span class="req">*</span></label>
+              <input id="email" name="email" type="email" autocomplete="email" required placeholder="tunombre@correo.com">
+            </div>
+            <div class="col">
+              <label for="telefono">Teléfono</label>
+              <input id="telefono" name="telefono" type="tel" inputmode="tel" placeholder="+57 300 000 0000">
+            </div>
+            <div class="col">
+              <label for="ubicacion">Ubicación</label>
+              <input id="ubicacion" name="ubicacion" type="text" placeholder="Bogotá, Colombia">
+            </div>
+            <div class="col">
+              <label for="linkedin">LinkedIn</label>
+              <input id="linkedin" name="linkedin" type="url" placeholder="https://linkedin.com/in/usuario">
+            </div>
+            <div class="col">
+              <label for="github">GitHub</label>
+              <input id="github" name="github" type="url" placeholder="https://github.com/usuario">
+            </div>
+            <div class="col">
+              <label for="sitio">Sitio/Portafolio</label>
+              <input id="sitio" name="sitio" type="url" placeholder="https://tu-sitio.com">
+            </div>
+            <div class="col col-12">
+              <label for="resumen">Resumen profesional</label>
+              <textarea id="resumen" name="resumen" rows="3" placeholder="Perfil breve, logros y tecnologías."></textarea>
+            </div>
+
+            <div class="col col-12">
+              <label for="habilidades">Habilidades</label>
+              <input id="habilidades" name="habilidades" type="text" placeholder="Escribe y presiona Enter…">
+              <div id="tags" class="tags"></div>
+              <p class="muted small">Tip: Enter o coma para añadir. Click para eliminar.</p>
+            </div>
+          </div>
+
+          <h3 class="muted mt-14">Experiencia</h3>
+          <div id="experienciaList" class="sortable"></div>
+          <div class="actions mt-10">
+            <button type="button" id="btnAddExp" class="btn">+ Añadir experiencia</button>
+          </div>
+
+          <h3 class="muted mt-14">Educación</h3>
+          <div id="educacionList" class="sortable"></div>
+          <div class="actions mt-10">
+            <button type="button" id="btnAddEdu" class="btn">+ Añadir educación</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Vista previa -->
+<aside class="card preview-card">
+  <div class="hd">
+    <span>Vista previa</span>
+  </div>
+  <div class="bd preview">
+    <div id="cvPreview" class="cv"></div>
+  </div>
+</aside>
+
+    <!-- Histórico -->
+    <aside class="card history-card">
+      <div class="hd">
+        <span>Histórico de hojas de vida</span>
+        <div class="right">
+          <input id="histSearch" class="search" type="search" placeholder="Buscar por nombre o título…">
+          <button id="btnBackup" class="btn">Exportar histórico</button>
+          <label class="btn" for="fileImportHist">Importar histórico</label>
+          <input id="fileImportHist" type="file" accept="application/json" hidden>
+          <button id="btnClearHist" class="btn danger">Vaciar</button>
+        </div>
+      </div>
+      <div class="bd">
+        <ul id="historyList" class="history"></ul>
+        <p class="muted" id="historyEmpty">Sin registros todavía.</p>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Templates -->
+  <template id="tpl-experiencia">
+    <div class="item exp" draggable="false">
+      <div class="item-hd">
+        <button type="button" class="drag" title="Arrastrar para reordenar" aria-label="Arrastrar">↕</button>
+        <strong>Experiencia</strong>
+        <div class="item-actions">
+          <button type="button" class="btn tiny" data-act="dup">Duplicar</button>
+          <button type="button" class="btn tiny danger" data-act="del">Eliminar</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col"><label>Empresa</label><input name="empresa" type="text" placeholder="Indumaqher S.A.S"></div>
+        <div class="col"><label>Cargo</label><input name="cargo" type="text" placeholder="Desarrollador Full-Stack"></div>
+        <div class="col"><label>Ubicación</label><input name="ubi" type="text" placeholder="Bogotá, COL"></div>
+        <div class="col"><label>Inicio</label><input name="ini" type="date"></div>
+        <div class="col"><label>Fin</label><input name="fin" type="date"></div>
+        <div class="col"><label class="muted"><input name="actual" type="checkbox"> Trabajo actual</label></div>
+        <div class="col col-12"><label>Logros (1 por línea)</label><textarea name="logros" rows="3" placeholder="• Implementé panel admin
+• Reduje tiempos de consulta"></textarea></div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-educacion">
+    <div class="item edu" draggable="false">
+      <div class="item-hd">
+        <button type="button" class="drag" title="Arrastrar para reordenar" aria-label="Arrastrar">↕</button>
+        <strong>Educación</strong>
+        <div class="item-actions">
+          <button type="button" class="btn tiny" data-act="dup">Duplicar</button>
+          <button type="button" class="btn tiny danger" data-act="del">Eliminar</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col"><label>Institución</label><input name="inst" type="text" placeholder="Universidad X"></div>
+        <div class="col"><label>Título</label><input name="tit" type="text" placeholder="Ingeniería de Sistemas"></div>
+        <div class="col"><label>Inicio</label><input name="ini" type="date"></div>
+        <div class="col"><label>Fin</label><input name="fin" type="date"></div>
+        <div class="col col-12"><label>Detalles (opcional)</label><textarea name="det" rows="3" placeholder="Promedio, becas, cursos relevantes…"></textarea></div>
+      </div>
+    </div>
+  </template>
+
+  <noscript>
+    <p style="padding:1rem">Este formulario requiere JavaScript para funcionar.</p>
+  </noscript>
+
+  <script src="cv_pro.js"></script>
+</body>
+</html>
